@@ -35,3 +35,5 @@ Yes, it's longer and it doesn't exactly respect conventions (if the alias starts
 As you can see, there's also the TypeName property which gives you the document type alias in case you need it somewhere.
 
 Please remember to re-run this whenever you make changes to document properties.
+
+Note: Although this is under my account, it was originally developed by [George J. Capnias](https://github.com/gcapnias). Idea and some testing were mine. Thanks! 
