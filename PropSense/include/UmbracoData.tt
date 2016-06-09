@@ -1,0 +1,334 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Configuration" #>
+<#@ assembly name="System.Core.dll" #>
+<#@ assembly Name="System.Data" #>
+<#@ assembly Name="System.Data.DataSetExtensions" #>
+<#@ assembly Name="System.Xml" #>
+<#@ assembly Name="System.Xml.Linq"#>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="Microsoft.CSharp"#>
+<#@ import namespace="System" #>
+<#@ import namespace="System.CodeDom" #>
+<#@ import namespace="System.CodeDom.Compiler" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Configuration" #>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.Data.Common"#>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Globalization" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#+
+
+    // <copyright file="SettingsManager.tt">
+    //
+    //  The contents of this file are subject to the Mozilla Public
+    //  License Version 1.1 (the "License"); you may not use this file
+    //  except in compliance with the License. You may obtain a copy of
+    //  the License at http://www.mozilla.org/MPL/
+    //  
+    //  Software distributed under the License is distributed on an 
+    //  "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+    //  implied. See the License for the specific language governing
+    //  rights and limitations under the License.
+    //
+    // </copyright>
+
+    public class SettingsManager
+    {
+        private bool _IsWebApplication = false;
+        private bool _IsApplication = false;
+        private IServiceProvider _ServiceProvider;
+
+        private System.Configuration.Configuration _AppConfig;
+        private EnvDTE.Project _CurrentProject;
+
+        public System.Configuration.Configuration Configuration
+        {
+            get { return _AppConfig; }
+        }
+
+        public string ConfigPath
+        {
+            get { return GetConfigPath(); }
+        }
+
+        public string ProjectPath
+        {
+            get { return GetProjectPath(); }
+        }
+
+        public EnvDTE.Project CurrentProject
+        {
+            get { return _CurrentProject; }
+        }
+
+        public bool IsApplication
+        {
+            get { return _IsApplication; }
+        }
+
+        public bool IsWebApplication
+        {
+            get { return _IsWebApplication; }
+        }
+
+        public string Namespace
+        {
+            get { return _CurrentProject.Properties.Item("DefaultNamespace").Value.ToString(); }
+        }
+
+        public string AssemblyName
+        {
+            get { return _CurrentProject.Properties.Item("AssemblyName").Value.ToString(); }
+        }
+
+        public ConnectionStringSettingsCollection ConnectionStrings
+        {
+            get { return _AppConfig.ConnectionStrings.ConnectionStrings; }
+        }
+
+        public KeyValueConfigurationCollection AppSettings
+        {
+            get { return _AppConfig.AppSettings.Settings; }
+        }
+
+        public SettingsManager(IServiceProvider ServiceProvider)
+        {
+            _ServiceProvider = ServiceProvider;
+            _CurrentProject = GetCurrentProject();
+            ExeConfigurationFileMap configFile = new ExeConfigurationFileMap();
+            configFile.ExeConfigFilename = GetConfigPath();
+            _AppConfig = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(configFile, ConfigurationUserLevel.None);
+        }
+
+        private EnvDTE.Project GetCurrentProject()
+        {
+            if (_ServiceProvider == null)
+                throw new Exception("Host property returned unexpected value (null)");
+
+            EnvDTE.DTE dte = (EnvDTE.DTE)_ServiceProvider.GetService(typeof(EnvDTE.DTE));
+            if (dte == null)
+                throw new Exception("Unable to retrieve EnvDTE.DTE");
+
+            Array activeSolutionProjects = (Array)dte.ActiveSolutionProjects;
+            if (activeSolutionProjects == null)
+                throw new Exception("DTE.ActiveSolutionProjects returned null");
+
+            EnvDTE.Project dteProject = (EnvDTE.Project)activeSolutionProjects.GetValue(0);
+            if (dteProject == null)
+                throw new Exception("DTE.ActiveSolutionProjects[0] returned null");
+
+            return dteProject;
+        }
+
+        private string GetProjectPath()
+        {
+            EnvDTE.Project project = _CurrentProject;
+            System.IO.FileInfo info = new System.IO.FileInfo(project.FullName);
+            return info.Directory.FullName;
+        }
+
+        private string GetConfigPath()
+        {
+            EnvDTE.Project project = _CurrentProject;
+            foreach (EnvDTE.ProjectItem item in project.ProjectItems)
+            {
+                // if it is the app.config file, then open it up
+                if (string.Compare(item.Name, "App.config", true) == 0)
+                {
+                    _IsApplication = true;
+                    return GetProjectPath() + "\\" + item.Name;
+                }
+
+                // if it is the web.config file, then open it up
+                if (string.Compare(item.Name, "Web.config", true) == 0)
+                {
+                    _IsWebApplication = true;
+                    return GetProjectPath() + "\\" + item.Name;
+                }
+            }
+            return "";
+        }
+
+        override public string ToString()
+        {
+            StringBuilder buffer = new StringBuilder();
+            buffer.AppendLine(string.Format("Namespace   : {0}", this.Namespace));
+            buffer.AppendLine(string.Format("AssemblyName: {0}", this.AssemblyName));
+            buffer.AppendLine(string.Format("ProjectPath : {0}", this.ProjectPath));
+            buffer.AppendLine(string.Format("ConfigPath  : {0}", this.ConfigPath));
+            buffer.AppendLine(string.Format("Is App      : {0}", this.IsApplication));
+            buffer.AppendLine(string.Format("Is WebApp   : {0}", this.IsWebApplication));
+            buffer.AppendLine("");
+            buffer.AppendLine("ConnectionStrings:");
+            foreach (ConnectionStringSettings item in this.ConnectionStrings)
+            {
+                buffer.AppendLine(string.Format("\tName: {0}, ConnectionString: {1}, ProviderName: {2}", item.Name, item.ConnectionString, item.ProviderName));
+            }
+            buffer.AppendLine("");
+            // Display each KeyValueConfigurationElement.
+            buffer.AppendLine("ApplicationSettings:");
+            foreach (KeyValueConfigurationElement item in this.AppSettings)
+            {
+                buffer.AppendLine(string.Format("\tKey: {0}, Value: {1}", item.Key, item.Value));
+            }
+
+            return buffer.ToString();
+        }
+    }
+
+
+    public class UmbracoData
+    {
+
+        private string DefaultFieldsCommand = @"SELECT [cmsContentType].[nodeId] AS ContentTypeId, [cmsContentType].[alias] AS TypeName, [cmsPropertyType].[Alias], [cmsDataType].[dbType], [cmsPropertyType].[Name] AS DisplayName, [cmsPropertyType].[sortOrder], [cmsPropertyType].[mandatory], [cmsPropertyType].[validationRegExp]
+FROM cmsPropertyType
+INNER JOIN [cmsDataType] ON [cmsDataType].[nodeId] = [cmsPropertyType].[dataTypeId]
+INNER JOIN [cmsContentType] ON [cmsPropertyType].[contentTypeId] = [cmsContentType].[nodeId]
+ORDER BY [cmsContentType].[nodeId], [cmsPropertyType].[sortOrder]";
+
+        private string DefaultTypesCommand = @"SELECT [cmsContentType2ContentType].[parentContentTypeId], [cmsContentType2ContentType].[childContentTypeId], [cmsContentType].[alias] 
+FROM [cmsContentType2ContentType] 
+INNER JOIN [cmsContentType] ON [cmsContentType2ContentType].[childContentTypeId] = [cmsContentType].[nodeId] 
+ORDER BY [cmsContentType2ContentType].[childContentTypeId], [cmsContentType2ContentType].[parentContentTypeId]";
+
+
+        private List<DocumentTypeRelation> relations;
+        private List<DocumentType> types;
+        private string[] documentNames = { };
+
+        public List<DocumentTypeRelation> Relations
+        {
+            get { return relations; }
+        }
+
+        public List<DocumentType> Types
+        {
+            get { return types; }
+        }
+
+        public string[] DocumentNames
+        {
+            get { return documentNames; }
+        }
+
+
+        public void Initialize(string DataProvider, string ConnectionString)
+        {
+            try
+            {
+                DataTable typesResults = new DataTable();
+                DataTable fieldResults = new DataTable();
+                DataTable documentResults = new DataTable();
+
+                DbProviderFactory factory = DbProviderFactories.GetFactory(DataProvider);
+
+                using (DbConnection ctx = factory.CreateConnection())
+                {
+                    ctx.ConnectionString = ConnectionString;
+
+                    DbCommand fieldsCommand = ctx.CreateCommand();
+                    fieldsCommand.CommandText = DefaultFieldsCommand;
+                    fieldsCommand.CommandType = CommandType.Text;
+
+                    DbCommand typesCommand = ctx.CreateCommand();
+                    typesCommand.CommandText = DefaultTypesCommand;
+                    typesCommand.CommandType = CommandType.Text;
+
+                    DbCommand documentCommand = ctx.CreateCommand();
+                    documentCommand.CommandText = "SELECT [cmsContentType].[alias] FROM [cmsContentType] ORDER BY [cmsContentType].[alias]";
+                    documentCommand.CommandType = CommandType.Text;
+
+                    ctx.Open();
+                    fieldResults.Load(fieldsCommand.ExecuteReader());
+                    typesResults.Load(typesCommand.ExecuteReader());
+                    documentResults.Load(documentCommand.ExecuteReader());
+                    ctx.Close();
+                }
+
+                relations = GetDocumentRelations(typesResults);
+                types = GetDocumentTypes(fieldResults);
+                documentNames = GetDocumentNames(documentResults);
+
+            }
+            catch (Exception ex)
+            {
+			throw(ex);
+            }
+        }
+
+        private List<DocumentType> GetDocumentTypes(DataTable model)
+        {
+            List<DocumentType> results = new List<DocumentType>();
+            foreach (DataRow row in model.Rows)
+            {
+                DocumentType docType = new DocumentType();
+                docType.ContentTypeId = row.Field<int>(0);
+                docType.TypeName = row.Field<string>(1);
+                docType.Alias = row.Field<string>(2);
+                docType.DbType = row.Field<string>(3);
+                docType.DisplayName = row.Field<string>(4);
+                docType.Required = row.Field<bool>(6);
+                docType.ValidationRegExp = row.Field<string>(7);
+
+                results.Add(docType);
+            }
+
+            return results;
+        }
+
+        private List<DocumentTypeRelation> GetDocumentRelations(DataTable model)
+        {
+            List<DocumentTypeRelation> result = new List<DocumentTypeRelation>();
+            foreach (DataRow row in model.Rows)
+            {
+                DocumentTypeRelation docRelation = new DocumentTypeRelation();
+                docRelation.ParentContentTypeId = row.Field<int>(0);
+                docRelation.ContentTypeId = row.Field<int>(1);
+
+                result.Add(docRelation);
+            }
+
+            return result;
+        }
+
+        private string[] GetDocumentNames(DataTable model)
+        {
+            List<string> documentList = new List<string>();
+            foreach (DataRow row in model.Rows)
+            {
+                documentList.Add(row.Field<string>(0));
+            }
+
+            string[] result = documentList.ToArray();
+
+            return result;
+        }
+
+    }
+
+    public class DocumentTypeRelation
+    {
+        public int ContentTypeId { get; set; }
+        public int ParentContentTypeId { get; set; }
+
+    }
+
+    public class DocumentType
+    {
+        public int ContentTypeId { get; set; }
+        public string TypeName { get; set; }
+        public string Alias { get; set; }
+        public string DbType { get; set; }
+        public string DisplayName { get; set; }
+        public string ValidationRegExp { get; set; }
+        public bool Required { get; set; }
+    }
+    
+    
+#>
