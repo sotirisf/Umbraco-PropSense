@@ -32,4 +32,6 @@ someNode.GetPropertyValue(Psn_dContentSliderItem.internalLink)
 
 Yes, it's longer and it doesn't exactly respect conventions (if the alias starts with a lowercase letter, then the property will also start with lowercase) but it gives you intellisense, and that's what you need to save time spent on typos and misspellings.
 
+As you can see, there's also the TypeName property which gives you the document type alias in case you need it somewhere.
+
 Please remember to re-run this whenever you make changes to document properties.
