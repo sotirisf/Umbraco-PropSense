@@ -40,4 +40,4 @@ Please remember to re-run this whenever you make changes to document properties.
 This won't (yet) work with SQL Server CE connection strings.
 
 ### Other notes
-Although this is under my account, it was originally developed by [George J. Capnias](https://github.com/gcapnias). Idea and some testing were mine. Thanks! 
+Although this is under my account, it was originally developed by [George J. Capnias](https://github.com/gcapnias) and is posted here with his permission. Idea and some testing were mine. Thanks! 
