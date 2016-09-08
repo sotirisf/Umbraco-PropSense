@@ -36,8 +36,5 @@ As you can see, there's also the TypeName property which gives you the document 
 
 Please remember to re-run this whenever you make changes to document properties.
 
-### Known issues
-This won't (yet) work with SQL Server CE connection strings.
-
 ### Other notes
 Although this is under my account, it was originally developed by [George J. Capnias](https://github.com/gcapnias) and is posted here with his permission. Idea and some testing were mine. Thanks! 
